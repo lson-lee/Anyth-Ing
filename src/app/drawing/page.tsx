@@ -12,10 +12,10 @@ export default function DrawingPage() {
   const [currentColor, setCurrentColor] = useState('#000000')
   const [currentLineWidth, setCurrentLineWidth] = useState(2)
   const [isEraser, setIsEraser] = useState(false)
-  const [isXModeDrawing, setIsXModeDrawing] = useState(false)
   const [currentColorIndex, setCurrentColorIndex] = useState(0)
   const [instructions, setInstructions] = useState('')
   const [showColorPicker, setShowColorPicker] = useState(true)
+  const [isXModeDrawing, setIsXModeDrawing] = useState(false)
 
   const colors = useRef([
     '#FF0000', '#FF7F00', '#FFFF00', '#00FF00', '#0000FF',
@@ -24,7 +24,7 @@ export default function DrawingPage() {
 
   const tips = [
     '按住 C 键或按住鼠标左键进行绘制',
-    '按 R 键清除画布',
+    '按 R 键清除布',
     '按 X 键开始/停止持续绘制',
     '按 1-5 键改变颜色',
     '按 [ 和 ] 键调整线条粗细',
@@ -137,6 +137,17 @@ export default function DrawingPage() {
     }
   }
 
+  const toggleXMode = () => {
+    setIsXModeDrawing(!isXModeDrawing)
+    setIsDrawing(!isXModeDrawing)
+    if (!isXModeDrawing) {
+      ctx?.beginPath()
+    } else {
+      setLastX(undefined)
+      setLastY(undefined)
+    }
+  }
+
   const handleKeyDown = (e: KeyboardEvent) => {
     if (e.key === 'c') {
       setIsDrawing(true)
@@ -174,47 +185,45 @@ export default function DrawingPage() {
     }
   }
 
-  const startDrawing = (e: MouseEvent<HTMLCanvasElement>) => {
+  const startDrawing = (e: React.MouseEvent<HTMLCanvasElement>) => {
     if (!isXModeDrawing) {
       setIsDrawing(true)
     }
     const canvas = canvasRef.current
     if (canvas) {
-      const pos = getMousePos(canvas, e)
-      setLastX(pos.x)
-      setLastY(pos.y)
+      const rect = canvas.getBoundingClientRect()
+      const x = e.clientX - rect.left
+      const y = e.clientY - rect.top
+      setLastX(x)
+      setLastY(y)
       ctx?.beginPath()
+      ctx?.moveTo(x, y)
     }
+  }
+
+  const draw = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    if ((!isDrawing && !isXModeDrawing) || !ctx || !canvasRef.current) return
+    
+    const rect = canvasRef.current.getBoundingClientRect()
+    const x = e.clientX - rect.left
+    const y = e.clientY - rect.top
+    
+    ctx.lineWidth = currentLineWidth
+    ctx.lineCap = 'round'
+    ctx.strokeStyle = isEraser ? '#FFFFFF' : currentColor
+
+    ctx.lineTo(x, y)
+    ctx.stroke()
+
+    setLastX(x)
+    setLastY(y)
   }
 
   const stopDrawing = () => {
     if (!isXModeDrawing) {
       setIsDrawing(false)
     }
-  }
-
-  const draw = (e: MouseEvent<HTMLCanvasElement>) => {
-    if (!isDrawing || !ctx || !canvasRef.current) return
-    
-    const pos = getMousePos(canvasRef.current, e)
-    const x = pos.x
-    const y = pos.y
-    
-    ctx.lineWidth = currentLineWidth
-    ctx.lineCap = 'round'
-    ctx.strokeStyle = isEraser ? '#FFFFFF' : currentColor
-
-    ctx.beginPath()
-    if (lastX && lastY) {
-      ctx.moveTo(lastX, lastY)
-    } else {
-      ctx.moveTo(x, y)
-    }
-    ctx.lineTo(x, y)
-    ctx.stroke()
-
-    setLastX(x)
-    setLastY(y)
+    ctx?.beginPath()
   }
 
   const clearCanvas = () => {
@@ -239,19 +248,9 @@ export default function DrawingPage() {
     }
   }
 
-  const toggleXMode = () => {
-    setIsXModeDrawing(!isXModeDrawing)
-    setIsDrawing(!isXModeDrawing)
-    if (!isXModeDrawing) {
-      ctx?.beginPath()
-    } else {
-      setLastX(undefined)
-      setLastY(undefined)
-    }
-  }
-
   const handleWheel = (e: WheelEvent<HTMLCanvasElement>) => {
     e.preventDefault()
+    e.stopPropagation()
     if (e.deltaY < 0) {
       switchColor('next')
     } else {
@@ -274,7 +273,7 @@ export default function DrawingPage() {
         <title>绘图应用</title>
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css" />
       </Head>
-      <div className="container" onKeyDown={handleKeyDown} onKeyUp={handleKeyUp} tabIndex={0}>
+      <div className="container mt-16" onKeyDown={handleKeyDown} onKeyUp={handleKeyUp} tabIndex={0}>
         <div className="control-panel">
           <h3>绘图工具</h3>
           <div className="color-ui" style={{ display: showColorPicker ? 'flex' : 'none' }}>
@@ -325,17 +324,22 @@ export default function DrawingPage() {
             </button>
           </div>
         </div>
-        <canvas
-          ref={canvasRef}
-          id="drawingCanvas"
-          width="800"
-          height="600"
-          onMouseDown={startDrawing}
-          onMouseMove={draw}
-          onMouseUp={stopDrawing}
-          onMouseOut={stopDrawing}
+        <div 
+          className="canvas-container" 
           onWheel={handleWheel}
-        ></canvas>
+          style={{ touchAction: 'none' }}
+        >
+          <canvas
+            ref={canvasRef}
+            id="drawingCanvas"
+            width="800"
+            height="600"
+            onMouseDown={startDrawing}
+            onMouseMove={draw}
+            onMouseUp={stopDrawing}
+            onMouseLeave={stopDrawing}
+          ></canvas>
+        </div>
         <div className="instructions" dangerouslySetInnerHTML={{ __html: instructions }}></div>
       </div>
 
@@ -344,7 +348,7 @@ export default function DrawingPage() {
           display: flex;
           justify-content: center;
           align-items: flex-start;
-          height: 100vh;
+          min-height: calc(100vh - 4rem);
           margin: 0;
           padding: 20px;
           box-sizing: border-box;
@@ -404,6 +408,12 @@ export default function DrawingPage() {
         }
         .tool-button.active {
           background-color: #d0d0d0;
+        }
+        .canvas-container {
+          overflow: hidden;
+          border: 1px solid #d9d9d9;
+          border-radius: 8px;
+          background-color: white;
         }
         canvas {
           border: 1px solid #d9d9d9;

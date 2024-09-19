@@ -20,6 +20,7 @@ export default function Home() {
       setMessages([...messages, input]);
       setInput("");
       inputRef.current?.focus();
+      scrollToBottom();
     }
   };
 
@@ -30,7 +31,10 @@ export default function Home() {
   };
 
   const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    if (scrollContainerRef.current) {
+      const scrollContainer = scrollContainerRef.current;
+      scrollContainer.scrollTop = scrollContainer.scrollHeight;
+    }
     setShowNewMessage(false);
   };
 
@@ -38,7 +42,7 @@ export default function Home() {
     const scrollContainer = scrollContainerRef.current;
     if (scrollContainer) {
       const isNearBottom = scrollContainer.scrollHeight - scrollContainer.clientHeight <= scrollContainer.scrollTop + 50;
-      setShowNewMessage(!isNearBottom);
+      setShowNewMessage(!isNearBottom && messages.length > 0);
     }
   };
 
@@ -134,7 +138,6 @@ export default function Home() {
               {msg}
             </motion.div>
           ))}
-          <div ref={messagesEndRef} />
         </div>
         {showNewMessage && (
           <motion.button
@@ -143,7 +146,7 @@ export default function Home() {
             onClick={scrollToBottom}
             className="absolute bottom-4 right-4 bg-blue-500 text-white px-4 py-2 rounded-full text-sm shadow-md hover:bg-blue-600 transition-colors"
           >
-            新消息
+            返回底部
           </motion.button>
         )}
       </motion.div>
