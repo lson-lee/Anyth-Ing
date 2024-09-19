@@ -1,44 +1,25 @@
 'use client'
 
 import { useState, useEffect, useRef } from "react";
+import { motion } from "framer-motion";
 
 export default function Home() {
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState<string[]>([]);
-  const [scale, setScale] = useState({ x: 1, y: 1 });
   const [showNewMessage, setShowNewMessage] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    const interval = setInterval(() => {
-      setScale({
-        x: 1 + Math.sin(Date.now() / 250) * 0.1,
-        y: 1 + Math.cos(Date.now() / 250) * 0.05
-      });
-    }, 16);
-    return () => clearInterval(interval);
-  }, []);
-
-  useEffect(() => {
-    if (messages.length > 0) {
-      const scrollContainer = scrollContainerRef.current;
-      if (scrollContainer) {
-        const isNearBottom = scrollContainer.scrollHeight - scrollContainer.clientHeight <= scrollContainer.scrollTop + 50; // 假设消息高度约为50px
-        if (isNearBottom) {
-          messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-          setShowNewMessage(false);
-        } else {
-          setShowNewMessage(true);
-        }
-      }
-    }
+    scrollToBottom();
   }, [messages]);
 
   const handleSubmit = () => {
     if (input.trim()) {
       setMessages([...messages, input]);
       setInput("");
+      inputRef.current?.focus();
     }
   };
 
@@ -57,79 +38,115 @@ export default function Home() {
     const scrollContainer = scrollContainerRef.current;
     if (scrollContainer) {
       const isNearBottom = scrollContainer.scrollHeight - scrollContainer.clientHeight <= scrollContainer.scrollTop + 50;
-      if (isNearBottom) {
-        setShowNewMessage(false);
-      }
+      setShowNewMessage(!isNearBottom);
     }
   };
 
   return (
-    <div className="flex flex-col items-center justify-between min-h-screen p-4">
-      <div className="flex-grow flex flex-col items-center justify-center">
-        <div className="relative w-40 h-36 mb-8">
-          <div 
-            className="absolute inset-0 bg-blue-300 transition-all duration-300 ease-in-out"
-            style={{
-              transform: `scale(${scale.x}, ${scale.y})`,
-              borderRadius: '50%',
-            }}
-          />
-          {/* 左眼 */}
-          <div 
-            className="absolute w-3 h-3 bg-black rounded-full transition-all duration-300 ease-in-out"
-            style={{ 
-              left: `calc(30% * ${scale.x})`, 
-              top: `calc(40% * ${scale.y})`,
-              transform: `translate(-50%, -50%) scale(${1 / ((scale.x + scale.y) / 2)})` 
-            }} 
-          />
-          {/* 右眼 */}
-          <div 
-            className="absolute w-3 h-3 bg-black rounded-full transition-all duration-300 ease-in-out"
-            style={{ 
-              right: `calc(30% * ${scale.x})`, 
-              top: `calc(40% * ${scale.y})`,
-              transform: `translate(50%, -50%) scale(${1 / ((scale.x + scale.y) / 2)})` 
-            }} 
-          />
-        </div>
-        <input
-          type="text"
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          onKeyPress={handleKeyPress}
-          className="border border-gray-300 rounded px-4 py-2 mb-4 w-64 text-black"
-          placeholder="输入消息..."
-        />
-        <button 
-          onClick={handleSubmit}
-          className="bg-blue-500 text-white px-6 py-2 rounded hover:bg-blue-600 transition-colors"
+    <div className="flex flex-col items-center justify-between min-h-screen p-4 bg-gradient-to-b from-blue-100 to-purple-100">
+      <div className="flex-grow flex flex-col items-center justify-center w-full max-w-md">
+        <motion.div
+          className="relative w-40 h-40 mb-8"
+          animate={{
+            scale: [1, 1.05, 1],
+          }}
+          transition={{
+            duration: 2,
+            repeat: Infinity,
+            repeatType: "reverse",
+          }}
         >
-          提交
-        </button>
+          {/* AI助手头像 */}
+          <div className="absolute inset-0 bg-blue-400 rounded-full shadow-lg"></div>
+          {/* 眼睛 */}
+          <div className="absolute top-1/3 left-1/4 w-4 h-4 bg-white rounded-full"></div>
+          <div className="absolute top-1/3 right-1/4 w-4 h-4 bg-white rounded-full"></div>
+          {/* 嘴巴 */}
+          <motion.div 
+            className="absolute bottom-1/4 left-1/2 w-16 h-2 bg-white rounded-full"
+            style={{ translateX: '-50%' }}
+            animate={{
+              scaleX: [1, 0.8, 1],
+            }}
+            transition={{
+              duration: 1.5,
+              repeat: Infinity,
+              repeatType: "reverse",
+            }}
+          ></motion.div>
+          {/* 天线 */}
+          <motion.div 
+            className="absolute top-0 left-1/2 w-1 h-6 bg-blue-600 origin-bottom"
+            style={{ translateX: '-50%' }}
+            animate={{
+              rotate: [0, 15, -15, 0],
+            }}
+            transition={{
+              duration: 2,
+              repeat: Infinity,
+            }}
+          ></motion.div>
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+          className="w-full"
+        >
+          <input
+            ref={inputRef}
+            type="text"
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyPress={handleKeyPress}
+            className="border-2 border-blue-300 rounded-full px-6 py-3 mb-4 w-full text-black focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+            placeholder="输入消息..."
+          />
+          <button 
+            onClick={handleSubmit}
+            className="bg-blue-500 text-white w-full px-6 py-3 rounded-full hover:bg-blue-600 transition-colors transform hover:scale-105"
+          >
+            发送消息
+          </button>
+        </motion.div>
       </div>
-      <div className="relative w-64 h-60 mt-4">
+
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, delay: 0.2 }}
+        className="relative w-full max-w-md h-80 mt-8 bg-white rounded-lg shadow-lg overflow-hidden"
+      >
         <div 
           ref={scrollContainerRef} 
-          className="h-full overflow-y-auto scrollbar-hide"
+          className="h-full overflow-y-auto scrollbar-hide p-4"
           onScroll={handleScroll}
         >
           {messages.map((msg, index) => (
-            <div key={index} className="bg-gray-100 p-2 mb-2 rounded text-black">
+            <motion.div
+              key={index}
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.3 }}
+              className="bg-blue-100 p-3 mb-3 rounded-lg text-black"
+            >
               {msg}
-            </div>
+            </motion.div>
           ))}
           <div ref={messagesEndRef} />
         </div>
         {showNewMessage && (
-          <button
+          <motion.button
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
             onClick={scrollToBottom}
-            className="absolute bottom-2 right-2 bg-blue-500 text-white px-3 py-1 rounded-full text-sm animate-bounce"
+            className="absolute bottom-4 right-4 bg-blue-500 text-white px-4 py-2 rounded-full text-sm shadow-md hover:bg-blue-600 transition-colors"
           >
             新消息
-          </button>
+          </motion.button>
         )}
-      </div>
+      </motion.div>
     </div>
   );
 }
